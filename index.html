@@ -33,10 +33,11 @@
 
         <main class="main-content">
             <!-- 左侧面板：时间监控 -->
-            <div class="data-panel left-panel">
+            <div class="data-panel left-panel" id="timeMonitorPanel">
                 <div class="panel-header">
                     <span class="panel-icon">◈</span>
                     <span class="panel-title">时间监控 / TIME MONITOR</span>
+                    <button class="warp-mode-btn" id="warpModeBtn" title="开启/关闭时空穿梭控制">WARP MODE</button>
                 </div>
                 <div class="data-item">
                     <span class="data-label">当前日期</span>
@@ -147,6 +148,26 @@
                 </div>
             </div>
         </main>
+
+        <!-- 时空穿梭控制器 -->
+        <div class="warp-controller" id="warpController">
+            <div class="warp-header">
+                <span class="warp-icon">✦</span>
+                <span class="warp-title">时空穿梭 / TEMPORAL WARP</span>
+                <div class="warp-input-group">
+                    <input type="number" class="warp-year-input" id="warpYearInput" min="1982" max="2407">
+                    <span class="warp-unit">YEAR</span>
+                </div>
+                <span class="warp-status" id="warpYearDisplay">REAL-TIME</span>
+                <button class="reset-btn" id="resetTime" style="opacity: 0; pointer-events: none;">同步实时 / SYNC REAL-TIME</button>
+            </div>
+            <div class="warp-slider-container">
+                <div class="era-markers" id="eraMarkers"></div>
+                <span class="slider-label">1982</span>
+                <input type="range" class="warp-slider" id="warpSlider">
+                <span class="slider-label">2407</span>
+            </div>
+        </div>
 
         <footer class="footer">
             <div class="footer-content">

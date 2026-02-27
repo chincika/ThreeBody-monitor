@@ -95,6 +95,11 @@ const PHASE_META = PHASES.map(phase => {
 // 为了匹配用户给定的 4.22光年，我们需要缩放距离
 const SCALE_FACTOR = TOTAL_DISTANCE_LY / accumulatedDistance;
 
+// 模拟时间逻辑
+let IS_SIMULATING = false;
+let SIMULATED_YEAR = new Date().getFullYear();
+let SIMULATED_TIME_OFFSET = 0; // 毫秒偏移
+
 let CURRENT_SPEED_PERCENT = 0;
 
 
@@ -102,10 +107,16 @@ function init() {
     updateDashboard();
     setInterval(updateDashboard, 100); // High refresh rate for smooth numbers
     createStars();
+    initWarpController();
 }
 
 function updateDashboard() {
-    const now = new Date();
+    let now = new Date();
+    
+    // 如果处于模拟模式，应用偏移量
+    if (IS_SIMULATING) {
+        now = new Date(now.getTime() + SIMULATED_TIME_OFFSET);
+    }
     
     // 1. 更新纪元
     updateEra(now);
@@ -114,37 +125,124 @@ function updateDashboard() {
     updateFleetStatus(now);
 }
 
+// 初始化时空穿梭控制器
+function initWarpController() {
+    const panel = document.getElementById('warpController');
+    const warpModeBtn = document.getElementById('warpModeBtn');
+    const slider = document.getElementById('warpSlider');
+    const yearInput = document.getElementById('warpYearInput');
+    const resetBtn = document.getElementById('resetTime');
+    const warpDisplay = document.getElementById('warpYearDisplay');
+    const markersContainer = document.getElementById('eraMarkers');
+    
+    if (!panel || !slider || !resetBtn || !warpModeBtn) return;
+
+    const totalDuration = PHASE_META[PHASE_META.length-1].endTime;
+    const arrivalYear = Math.ceil(JOURNEY_START_YEAR + totalDuration);
+    
+    const minYear = JOURNEY_START_YEAR;
+    const maxYear = arrivalYear;
+    slider.min = minYear;
+    slider.max = maxYear;
+    yearInput.min = minYear;
+    yearInput.max = maxYear;
+
+    const updateWarp = (year) => {
+        const selectedYear = Math.max(minYear, Math.min(maxYear, parseInt(year)));
+        const currentRealDate = new Date();
+        const targetDate = new Date(currentRealDate);
+        targetDate.setFullYear(selectedYear);
+        
+        SIMULATED_TIME_OFFSET = targetDate.getTime() - currentRealDate.getTime();
+        IS_SIMULATING = true;
+        
+        warpDisplay.textContent = selectedYear + ' 年';
+        slider.value = selectedYear;
+        yearInput.value = selectedYear;
+        document.body.classList.add('time-warping');
+        resetBtn.style.opacity = '1';
+        resetBtn.style.pointerEvents = 'auto';
+    };
+
+    // 暴露给标记点击事件
+    window.updateWarpFunction = updateWarp;
+
+    // 1. 点击专门的 WARP MODE 按钮切换显示
+    warpModeBtn.addEventListener('click', () => {
+        const isActive = panel.classList.toggle('active');
+        warpModeBtn.classList.toggle('active', isActive);
+    });
+
+    renderEraMarkers(markersContainer, minYear, maxYear);
+
+    slider.addEventListener('input', (e) => updateWarp(e.target.value));
+    yearInput.addEventListener('change', (e) => updateWarp(e.target.value));
+
+    resetBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 防止触发面板切换
+        IS_SIMULATING = false;
+        SIMULATED_TIME_OFFSET = 0;
+        const currentYear = new Date().getFullYear();
+        slider.value = currentYear;
+        yearInput.value = currentYear;
+        warpDisplay.textContent = 'REAL-TIME';
+        document.body.classList.remove('time-warping');
+        resetBtn.style.opacity = '0';
+        resetBtn.style.pointerEvents = 'none';
+    });
+}
+
+function renderEraMarkers(container, minYear, maxYear) {
+    if (!container) return;
+    container.innerHTML = '';
+    
+    // 过滤出在航行期间切换的纪元
+    const relevantEras = ERAS.filter(era => 
+        era.type === 'normal' && era.start > minYear && era.start < maxYear
+    );
+
+    let lastPos = -20; // 记录上一个标记的位置百分比
+    let staggerLevel = 0; // 0: 正常, 1: staggered, 2: staggered-deep
+
+    relevantEras.forEach((era, index) => {
+        const percent = ((era.start - minYear) / (maxYear - minYear)) * 100;
+        const marker = document.createElement('div');
+        
+        // 判定是否重叠（小于 8% 视为拥挤）
+        if (percent - lastPos < 8) {
+            staggerLevel = (staggerLevel + 1) % 3; // 循环 0, 1, 2
+        } else {
+            staggerLevel = 0; // 空间足够，回归正常层级
+        }
+
+        let className = 'era-marker';
+        if (staggerLevel === 1) className += ' staggered';
+        if (staggerLevel === 2) className += ' staggered-deep';
+
+        marker.className = className;
+        marker.style.left = `${percent}%`;
+        marker.title = `点击跳转到 ${era.name} 元年 (${era.start}年)`;
+        
+        marker.innerHTML = `
+            <div class="marker-dot"></div>
+            <div class="era-marker-label">${era.name}</div>
+        `;
+
+        // 添加点击跳转功能
+        marker.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const updateWarp = window.updateWarpFunction; 
+            if (updateWarp) updateWarp(era.start);
+        });
+
+        container.appendChild(marker);
+        lastPos = percent;
+    });
+}
+
 function updateEra(date) {
     const year = date.getFullYear();
     const timestamp = date.getTime();
-    
-    let currentEra = ERAS[0]; // Default
-    
-    // 查找匹配的纪元
-    // 特殊处理魔法时代 (精确时间)
-    const magicEra = ERAS.find(e => e.name === '魔法时代');
-    if (timestamp >= magicEra.start && timestamp <= magicEra.end) {
-        currentEra = magicEra;
-    } else {
-        // 普通年份匹配
-        for (let i = ERAS.length - 1; i >= 0; i--) {
-            const era = ERAS[i];
-            if (era.type === 'normal') {
-                if (year >= era.start) {
-                    // 如果有end且year > end，说明不是这个纪元(除非是最后一个)
-                    if (era.end && year > era.end && i < ERAS.length - 1) continue;
-                    currentEra = era;
-                    break;
-                }
-            }
-        }
-    }
-
-    document.getElementById('eraName').textContent = currentEra.name;
-    
-    // 计算纪元内年份和日期时间
-    let eraYearNumStr = '';
-    let eraDateTimeStr = '';
     
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -154,29 +252,44 @@ function updateEra(date) {
     const timeStr = `${hours}:${minutes}:${seconds}`;
     const dateStr = `${month}月${day}日`;
 
-    if (currentEra.name === '魔法时代') {
-        // 魔法时代非常短暂
-        eraYearNumStr = ''; 
-        eraDateTimeStr = `${dateStr} ${timeStr}`;
-    } else if (currentEra.start === -Infinity) {
-        // 公元前/公元
-        eraYearNumStr = year > 0 ? `${year}年` : `前${Math.abs(year)}年`;
-        eraDateTimeStr = `${dateStr} ${timeStr}`;
-    } else {
-        // 其他纪元：计算偏移年份
-        const eraYearNum = year - currentEra.start + 1;
-        eraYearNumStr = `${eraYearNum}年`;
-        eraDateTimeStr = `${dateStr} ${timeStr}`;
+    // 查找所有匹配的纪元
+    let activeEras = [];
+    for (let i = 0; i < ERAS.length; i++) {
+        const era = ERAS[i];
+        if (era.type === 'precise') {
+            if (timestamp >= era.start && timestamp <= era.end) {
+                activeEras.push(era);
+            }
+        } else {
+            if (year >= era.start && (era.end === undefined || year < era.end || era.end === Infinity)) {
+                activeEras.push(era);
+            }
+        }
     }
+
+    if (activeEras.length === 0) activeEras = [ERAS[0]];
+
+    // 格式化纪元名称: A / B
+    const eraNames = activeEras.map(e => e.name).join(' / ');
+    document.getElementById('eraName').textContent = eraNames;
     
-    // 分别显示年份和日期时间
-    document.getElementById('eraYearNum').textContent = eraYearNumStr;
-    document.getElementById('eraDateTime').textContent = eraDateTimeStr;
+    // 格式化纪元年份: 纪元Axx年 <br> 纪元Bxx年
+    const eraYearsHtml = activeEras.map(era => {
+        let eraYear;
+        if (era.type === 'precise') {
+            eraYear = '元年';
+        } else if (era.start === -Infinity) {
+            eraYear = year > 0 ? `${year}年` : `前${Math.abs(year)}年`;
+        } else {
+            const y = year - era.start + 1;
+            eraYear = y === 1 ? '元年' : y + '年';
+        }
+        return activeEras.length > 1 ? `${era.name}${eraYear}` : eraYear;
+    }).join('<br>');
     
-    // 公元时间作为参考
+    document.getElementById('eraYearNum').innerHTML = eraYearsHtml;
+    document.getElementById('eraDateTime').textContent = `${dateStr} ${timeStr}`;
     document.getElementById('commonYear').textContent = `(参考: 公元 ${year}年${month}月${day}日 ${timeStr})`;
-    
-    // 隐藏原来的独立时间显示，因为已经包含在纪元时间里了
     document.getElementById('commonTime').style.display = 'none';
 }
 
@@ -195,16 +308,27 @@ function updateFleetStatus(now) {
     // 确定当前阶段
     let currentPhase = PHASE_META[PHASE_META.length - 1];
     let phaseIndex = PHASE_META.length - 1;
+    let isFinished = false;
 
-    for (let i = 0; i < PHASE_META.length; i++) {
-        if (elapsedYears < PHASE_META[i].endTime) {
-            currentPhase = PHASE_META[i];
-            phaseIndex = i;
-            break;
+    if (elapsedYears >= PHASE_META[PHASE_META.length - 1].endTime) {
+        isFinished = true;
+    } else {
+        for (let i = 0; i < PHASE_META.length; i++) {
+            if (elapsedYears < PHASE_META[i].endTime) {
+                currentPhase = PHASE_META[i];
+                phaseIndex = i;
+                break;
+            }
         }
     }
 
     // 计算当前速度和距离
+    // 如果已经到达，直接设为结束状态
+    if (isFinished) {
+        updateDisplay(0, 0, elapsedYears * 0.08, '已到达太阳系', elapsedYears);
+        return;
+    }
+
     const timeInPhase = elapsedYears - currentPhase.startTime; // years
     const timeInPhaseSec = timeInPhase * 365.25 * 24 * 3600;
     
@@ -258,10 +382,14 @@ function updateDisplay(speed, remainingLy, attrition, phaseName, elapsedYears) {
     CURRENT_SPEED_PERCENT = speedPercent;
 
     // 距离
-    document.getElementById('distanceValue').textContent = '距太阳系 ' + remainingLy.toFixed(4) + ' 光年';
-    const remainingKm = remainingLy * LY_TO_KM;
-    // Show decimals for km to see movement
-    document.getElementById('distanceKm').textContent = remainingKm.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' km';
+    if (remainingLy <= 0) {
+        document.getElementById('distanceValue').textContent = '已到达太阳系';
+        document.getElementById('distanceKm').textContent = '0.00 km';
+    } else {
+        document.getElementById('distanceValue').textContent = '距太阳系 ' + remainingLy.toFixed(4) + ' 光年';
+        const remainingKm = remainingLy * LY_TO_KM;
+        document.getElementById('distanceKm').textContent = remainingKm.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' km';
+    }
     
     // 距离进度 (总距离 - 剩余) / 总距离
     const distPercent = Math.min(100, ((TOTAL_DISTANCE_LY - remainingLy) / TOTAL_DISTANCE_LY) * 100);
