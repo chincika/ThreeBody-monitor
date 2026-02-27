@@ -108,6 +108,35 @@ function init() {
     setInterval(updateDashboard, 100); // High refresh rate for smooth numbers
     createStars();
     initWarpController();
+    initBackgroundRotation();
+}
+
+// 背景轮询切换逻辑
+function initBackgroundRotation() {
+    const bgImages = [
+        'assets/images/bg.jpg',
+        'assets/images/bg1.jpg',
+        'assets/images/0.jpg'
+    ];
+    
+    let currentBgIndex = 0;
+    const starfield = document.getElementById('starfield');
+    
+    if (!starfield) return;
+
+    // 每 3 分钟切换一次 (180000 毫秒)
+    setInterval(() => {
+        currentBgIndex = (currentBgIndex + 1) % bgImages.length;
+        const nextBg = bgImages[currentBgIndex];
+        
+        // 预加载图片以确保切换平滑
+        const img = new Image();
+        img.src = nextBg;
+        img.onload = () => {
+            // 切换背景，保持原有的 linear-gradient 遮罩
+            starfield.style.backgroundImage = `linear-gradient(rgba(10, 14, 23, 0.7), rgba(10, 14, 23, 0.7)), url('${nextBg}')`;
+        };
+    }, 180000); 
 }
 
 function updateDashboard() {

@@ -42,6 +42,7 @@ body {
     background-size: cover;
     background-position: center;
     z-index: -2;
+    transition: background-image 2s ease-in-out;
 }
 
 .nebula {
