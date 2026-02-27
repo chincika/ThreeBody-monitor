@@ -110,6 +110,18 @@ function init() {
     createStars();
     initWarpController();
     initBackgroundRotation();
+    syncLeftPanelHeight();
+    // 窗口resize时重新对齐
+    window.addEventListener('resize', syncLeftPanelHeight);
+}
+
+// 让左侧面板高度始终与中间面板保持一致
+function syncLeftPanelHeight() {
+    const centerPanel = document.querySelector('.center-panel');
+    const leftPanel   = document.querySelector('.left-panel');
+    if (!centerPanel || !leftPanel) return;
+    const h = centerPanel.getBoundingClientRect().height;
+    if (h > 0) leftPanel.style.height = h + 'px';
 }
 
 // 背景轮询切换逻辑
