@@ -298,8 +298,7 @@ body {
 }
 
 .panel-note {
-    margin-top: auto;
-    padding-top: 15px;
+    padding-top: 12px;
     font-size: 10px;
     color: var(--text-muted);
     line-height: 1.4;
@@ -311,7 +310,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
+    padding: 9px 0;
     border-bottom: 1px solid rgba(0, 212, 255, 0.1);
 }
 
@@ -794,6 +793,69 @@ body.time-warping .orbit {
     .title { font-size: 20px; }
 }
 
+/* ===== 左侧面板内嵌历史事件区 ===== */
+.inline-events-section {
+    margin-top: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.inline-events-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0 10px;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.inline-events-icon {
+    color: var(--primary-color);
+    font-size: 13px;
+}
+
+.inline-events-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--primary-color);
+    flex: 1;
+}
+
+.inline-events-badge {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--primary-color);
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px solid var(--border-color);
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.inline-events-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0 4px 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 212, 255, 0.2) transparent;
+    min-height: 120px;
+    max-height: 260px;
+}
+
+.inline-events-list::-webkit-scrollbar { width: 3px; }
+.inline-events-list::-webkit-scrollbar-track { background: transparent; }
+.inline-events-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 255, 0.2);
+    border-radius: 2px;
+}
+
+
 /* ===== 历史事件面板 ===== */
 .events-panel {
     display: block;
@@ -870,8 +932,8 @@ body.time-warping .orbit {
 
 .event-item {
     display: flex;
-    gap: 10px;
-    padding: 9px 0;
+    gap: 8px;
+    padding: 7px 0;
     border-bottom: 1px solid rgba(0, 212, 255, 0.07);
     animation: eventFadeIn 0.25s ease both;
     align-items: flex-start;
@@ -894,10 +956,10 @@ body.time-warping .orbit {
 
 .event-text {
     font-family: var(--font-body);
-    font-size: 14px;
-    color: rgba(200, 230, 255, 0.88);
-    line-height: 1.7;
-    letter-spacing: 0.3px;
+    font-size: 13px;
+    color: rgba(200, 230, 255, 0.85);
+    line-height: 1.65;
+    letter-spacing: 0.2px;
 }
 
 .events-empty {

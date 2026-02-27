@@ -32,7 +32,7 @@
         </header>
 
         <main class="main-content">
-            <!-- 左侧面板：时间监控 -->
+            <!-- 左侧面板：时间监控 + 历史事件 -->
             <div class="data-panel left-panel" id="timeMonitorPanel">
                 <div class="panel-header">
                     <span class="panel-icon">◈</span>
@@ -51,7 +51,7 @@
                     <span class="data-label">纪元年份</span>
                     <span class="data-value" id="eraYearNum">--年</span>
                 </div>
-                <div class="data-item">
+                <div class="data-item" style="border-bottom: none;">
                     <span class="data-label">舰队启航时间</span>
                     <span class="data-value">公元 1982年</span>
                 </div>
@@ -59,8 +59,21 @@
                     <span class="data-label">系统参考时间</span>
                     <span class="data-value small">--:--:--</span>
                 </div>
+
+                <!-- 历史事件内嵌区 -->
+                <div class="inline-events-section">
+                    <div class="inline-events-header">
+                        <span class="inline-events-icon">◉</span>
+                        <span class="inline-events-title">历史事件 / CHRONICLE</span>
+                        <span class="inline-events-badge" id="eventsYearBadge">--</span>
+                    </div>
+                    <div class="inline-events-list" id="eventsList">
+                        <div class="events-empty">◈ 载入中...</div>
+                    </div>
+                </div>
+
                 <div class="panel-note">
-                    * 纪年数据源自“三体wiki”，以公元2007年为危机纪元元年。
+                    * 纪年数据源自"三体wiki"，以公元2007年为危机纪元元年。
                 </div>
             </div>
 
@@ -166,18 +179,6 @@
                 <span class="slider-label">1982</span>
                 <input type="range" class="warp-slider" id="warpSlider">
                 <span class="slider-label">2407</span>
-            </div>
-        </div>
-
-        <!-- 历史事件面板（时间轴下方） -->
-        <div class="events-panel" id="eventsPanel">
-            <div class="events-header">
-                <span class="events-icon">◉</span>
-                <span class="events-title">历史事件 / CHRONICLE</span>
-                <span class="events-year-badge" id="eventsYearBadge">--</span>
-            </div>
-            <div class="events-list" id="eventsList">
-                <div class="events-empty">◈ 开启时空穿梭后，拖动时间轴查看该年发生的事件</div>
             </div>
         </div>
 
