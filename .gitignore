@@ -1,0 +1,22 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project files
+node_modules/
+dist/
+build/
+.git/
+
+# User-specific files
+threeBody-new/
+需求说明.md
+*.tmp
+*.log
