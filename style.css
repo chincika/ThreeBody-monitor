@@ -267,6 +267,16 @@ body {
     color: var(--primary-color);
 }
 
+.panel-note {
+    margin-top: auto;
+    padding-top: 15px;
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    font-style: italic;
+    opacity: 0.8;
+}
+
 .data-item {
     display: flex;
     justify-content: space-between;
