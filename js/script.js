@@ -900,18 +900,45 @@ async function searchWikiSuggestions(query, titleEl, loading, contentEl, errorEl
     }
 }
 
+function proxyImageUrl(src) {
+    // 补全协议和域名
+    if (src.startsWith('//')) src = 'https:' + src;
+    else if (src.startsWith('/')) src = 'https://santi.huijiwiki.com' + src;
+    // 通过 corsproxy.io 代理图片，绕过防盗链和CORS限制
+    return 'https://corsproxy.io/?' + encodeURIComponent(src);
+}
+
 function processWikiHtml(html) {
     // 创建临时DOM处理链接
     const div = document.createElement('div');
     div.innerHTML = html;
 
-    // 修正图片链接
+    // 修正图片链接 — 通过代理加载以绕过防盗链
     div.querySelectorAll('img').forEach(img => {
-        let src = img.getAttribute('src') || '';
-        if (src.startsWith('//')) src = 'https:' + src;
-        else if (src.startsWith('/')) src = 'https://santi.huijiwiki.com' + src;
-        img.src = src;
+        const originalSrc = img.getAttribute('src') || '';
+        if (!originalSrc) return;
+
+        const proxiedSrc = proxyImageUrl(originalSrc);
+        img.src = proxiedSrc;
+
+        // 同步处理 srcset（响应式图片）
+        const srcset = img.getAttribute('srcset');
+        if (srcset) {
+            const newSrcset = srcset.split(',').map(part => {
+                const [url, size] = part.trim().split(/\s+/);
+                if (!url) return part;
+                return size ? proxyImageUrl(url) + ' ' + size : proxyImageUrl(url);
+            }).join(', ');
+            img.srcset = newSrcset;
+        }
+
         img.style.maxWidth = '100%';
+        img.style.borderRadius = '6px';
+        img.style.border = '1px solid var(--border-color)';
+        img.loading = 'lazy';
+
+        // 加载失败时隐藏破损图标
+        img.onerror = function() { this.style.display = 'none'; };
     });
 
     // 修正内部wiki链接为弹窗内跳转
