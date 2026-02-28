@@ -28,8 +28,41 @@
             <div class="connection-status">
                 <span class="status-dot"></span>
                 <span class="status-text">实时连接: STABLE</span>
+                <span class="header-date-divider">|</span>
+                <span class="header-current-date" id="headerCurrentDate">公元 ---- 年</span>
             </div>
         </header>
+
+        <!-- 系统信息检索 -->
+        <div class="search-bar-wrapper" id="searchBarWrapper">
+            <div class="search-bar-inner">
+                <span class="search-icon">◈</span>
+                <input type="text" class="search-input" id="searchInput" placeholder="系统信息检索 / SYSTEM INTEL SEARCH — 输入关键词检索三体Wiki..." autocomplete="off">
+                <button class="search-btn" id="searchBtn">
+                    <span>SEARCH</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 时空穿梭控制器 -->
+        <div class="warp-controller" id="warpController">
+            <div class="warp-header">
+                <span class="warp-icon">✦</span>
+                <span class="warp-title">时空穿梭 / TEMPORAL WARP</span>
+                <div class="warp-input-group">
+                    <input type="number" class="warp-year-input" id="warpYearInput" min="1982" max="2407">
+                    <span class="warp-unit">YEAR</span>
+                </div>
+                <span class="warp-status" id="warpYearDisplay">REAL-TIME</span>
+                <button class="reset-btn" id="resetTime" style="opacity: 0; pointer-events: none;">同步实时 / SYNC REAL-TIME</button>
+            </div>
+            <div class="warp-slider-container">
+                <div class="era-markers" id="eraMarkers"></div>
+                <span class="slider-label">1982</span>
+                <input type="range" class="warp-slider" id="warpSlider">
+                <span class="slider-label">2407</span>
+            </div>
+        </div>
 
         <main class="main-content">
             <!-- 左侧面板：时间监控 + 历史事件 -->
@@ -162,25 +195,6 @@
             </div>
         </main>
 
-        <!-- 时空穿梭控制器 -->
-        <div class="warp-controller" id="warpController">
-            <div class="warp-header">
-                <span class="warp-icon">✦</span>
-                <span class="warp-title">时空穿梭 / TEMPORAL WARP</span>
-                <div class="warp-input-group">
-                    <input type="number" class="warp-year-input" id="warpYearInput" min="1982" max="2407">
-                    <span class="warp-unit">YEAR</span>
-                </div>
-                <span class="warp-status" id="warpYearDisplay">REAL-TIME</span>
-                <button class="reset-btn" id="resetTime" style="opacity: 0; pointer-events: none;">同步实时 / SYNC REAL-TIME</button>
-            </div>
-            <div class="warp-slider-container">
-                <div class="era-markers" id="eraMarkers"></div>
-                <span class="slider-label">1982</span>
-                <input type="range" class="warp-slider" id="warpSlider">
-                <span class="slider-label">2407</span>
-            </div>
-        </div>
 
         <footer class="footer">
             <div class="footer-content">
@@ -199,5 +213,30 @@
     </div>
 
     <script src="js/script.js"></script>
+
+    <!-- Wiki 检索结果弹窗 -->
+    <div class="wiki-modal-overlay" id="wikiModalOverlay">
+        <div class="wiki-modal" id="wikiModal">
+            <div class="wiki-modal-header">
+                <span class="wiki-modal-icon">◉</span>
+                <span class="wiki-modal-title" id="wikiModalTitle">三体Wiki检索</span>
+                <div class="wiki-modal-actions">
+                    <a class="wiki-modal-link" id="wikiModalLink" href="#" target="_blank" rel="noopener">在Wiki中查看 ↗</a>
+                    <button class="wiki-modal-close" id="wikiModalClose">✕</button>
+                </div>
+            </div>
+            <div class="wiki-modal-body" id="wikiModalBody">
+                <div class="wiki-loading" id="wikiLoading">
+                    <div class="wiki-loading-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span>正在检索数据库...</span>
+                </div>
+                <div class="wiki-content" id="wikiContent" style="display:none;"></div>
+                <div class="wiki-error" id="wikiError" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -109,6 +109,7 @@ function init() {
     setInterval(updateDashboard, 100); // High refresh rate for smooth numbers
     createStars();
     initWarpController();
+    initSearchBar();
     initBackgroundRotation();
     syncLeftPanelHeight();
     // 窗口resize时重新对齐
@@ -174,6 +175,23 @@ function updateDashboard() {
         : now.getFullYear();
     updateTitle(_titleYear);
     updateFooter(_titleYear);
+
+    // 更新标题栏当前日期（随时空穿梭年份变化）
+    const headerDateEl = document.getElementById('headerCurrentDate');
+    if (headerDateEl) {
+        const displayYear = IS_SIMULATING
+            ? (new Date(new Date().getTime() + SIMULATED_TIME_OFFSET)).getFullYear()
+            : now.getFullYear();
+        const displayMonth = IS_SIMULATING
+            ? (new Date(new Date().getTime() + SIMULATED_TIME_OFFSET)).getMonth() + 1
+            : now.getMonth() + 1;
+        const displayDay = IS_SIMULATING
+            ? (new Date(new Date().getTime() + SIMULATED_TIME_OFFSET)).getDate()
+            : now.getDate();
+        headerDateEl.textContent = IS_SIMULATING
+            ? `公元 ${displayYear} 年`
+            : `公元 ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+    }
 
     // 4. 非穿梭模式下，跟随真实年份显示事件（年份变化时才刷新）
     if (!IS_SIMULATING) {
@@ -242,6 +260,13 @@ function initWarpController() {
     warpModeBtn.addEventListener('click', () => {
         const isActive = panel.classList.toggle('active');
         warpModeBtn.classList.toggle('active', isActive);
+        // 激活时默认设置为当前年份
+        if (isActive && !IS_SIMULATING) {
+            const currentYear = new Date().getFullYear();
+            slider.value = currentYear;
+            yearInput.value = currentYear;
+            warpDisplay.textContent = 'REAL-TIME';
+        }
     });
 
     renderEraMarkers(markersContainer, minYear, maxYear);
@@ -665,3 +690,226 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
  
+
+// ============================================================
+// 系统信息检索 — 三体Wiki 查询
+// ============================================================
+
+function initSearchBar() {
+    const input  = document.getElementById('searchInput');
+    const btn    = document.getElementById('searchBtn');
+    const overlay = document.getElementById('wikiModalOverlay');
+    const closeBtn = document.getElementById('wikiModalClose');
+
+    if (!input || !btn || !overlay) return;
+
+    const doSearch = () => {
+        const query = input.value.trim();
+        if (!query) return;
+        openWikiModal(query);
+    };
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') doSearch();
+    });
+
+    btn.addEventListener('click', doSearch);
+
+    // Close modal
+    closeBtn && closeBtn.addEventListener('click', closeWikiModal);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeWikiModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeWikiModal();
+    });
+}
+
+function openWikiModal(query) {
+    const overlay    = document.getElementById('wikiModalOverlay');
+    const titleEl    = document.getElementById('wikiModalTitle');
+    const linkEl     = document.getElementById('wikiModalLink');
+    const loading    = document.getElementById('wikiLoading');
+    const contentEl  = document.getElementById('wikiContent');
+    const errorEl    = document.getElementById('wikiError');
+
+    // Reset state
+    titleEl.textContent = `检索中: ${query}`;
+    linkEl.href = `https://santi.huijiwiki.com/wiki/${encodeURIComponent(query)}`;
+    loading.style.display = 'flex';
+    contentEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    contentEl.innerHTML = '';
+    errorEl.innerHTML = '';
+
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    fetchWikiPage(query, titleEl, linkEl, loading, contentEl, errorEl);
+}
+
+function closeWikiModal() {
+    const overlay = document.getElementById('wikiModalOverlay');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+async function fetchWikiPage(query, titleEl, linkEl, loading, contentEl, errorEl) {
+    // 使用MediaWiki API获取页面内容（HTML格式），支持CORS
+    const apiBase = 'https://santi.huijiwiki.com/api.php';
+    const params = new URLSearchParams({
+        action: 'parse',
+        page: query,
+        format: 'json',
+        prop: 'text|displaytitle',
+        disableeditsection: '1',
+        origin: '*'
+    });
+
+    try {
+        const response = await fetch(`${apiBase}?${params}`, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        if (data.error) {
+            // 页面不存在，尝试搜索
+            if (data.error.code === 'missingtitle') {
+                await searchWikiSuggestions(query, titleEl, loading, contentEl, errorEl);
+                return;
+            }
+            throw new Error(data.error.info || '未知错误');
+        }
+
+        const html = data.parse.text['*'];
+        const displayTitle = data.parse.displaytitle || query;
+
+        titleEl.textContent = `◉ ${displayTitle}`;
+
+        // 处理HTML内容：修正内部链接指向真实wiki
+        const processed = processWikiHtml(html);
+
+        loading.style.display = 'none';
+        contentEl.style.display = 'block';
+        contentEl.innerHTML = processed;
+
+        // 让wiki内部链接点击时在弹窗内搜索
+        contentEl.querySelectorAll('a[data-wiki-link]').forEach(a => {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = a.getAttribute('data-wiki-link');
+                if (target) {
+                    document.getElementById('searchInput').value = target;
+                    openWikiModal(target);
+                }
+            });
+        });
+
+    } catch (err) {
+        loading.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.innerHTML = `
+            <div style="font-size:22px;margin-bottom:16px;opacity:0.5;">◈</div>
+            <div style="color:var(--primary-color);margin-bottom:8px;letter-spacing:2px;">检索失败</div>
+            <div style="opacity:0.6;font-size:11px;">${err.message}</div>
+            <div style="margin-top:20px;">
+                <a href="https://santi.huijiwiki.com/wiki/${encodeURIComponent(query)}" 
+                   target="_blank" rel="noopener"
+                   style="color:var(--secondary-color);font-size:11px;border:1px solid rgba(0,255,153,0.3);padding:6px 14px;border-radius:4px;text-decoration:none;">
+                    在浏览器中直接打开 ↗
+                </a>
+            </div>
+        `;
+    }
+}
+
+async function searchWikiSuggestions(query, titleEl, loading, contentEl, errorEl) {
+    // 页面不存在时，尝试搜索相关词条
+    const apiBase = 'https://santi.huijiwiki.com/api.php';
+    const params = new URLSearchParams({
+        action: 'query',
+        list: 'search',
+        srsearch: query,
+        format: 'json',
+        srlimit: '8',
+        origin: '*'
+    });
+
+    try {
+        const r = await fetch(`${apiBase}?${params}`);
+        const data = await r.json();
+        const results = data?.query?.search || [];
+
+        titleEl.textContent = `搜索结果: "${query}"`;
+        loading.style.display = 'none';
+
+        if (results.length === 0) {
+            errorEl.style.display = 'block';
+            errorEl.innerHTML = `
+                <div style="font-size:22px;margin-bottom:16px;opacity:0.5;">◈</div>
+                <div style="color:var(--primary-color);margin-bottom:8px;letter-spacing:2px;">未找到相关词条</div>
+                <div style="opacity:0.6;font-size:11px;">请尝试其他关键词</div>
+            `;
+            return;
+        }
+
+        contentEl.style.display = 'block';
+        contentEl.innerHTML = `
+            <div style="margin-bottom:16px;font-family:var(--font-display);font-size:11px;color:var(--text-muted);letter-spacing:1px;">
+                ◈ 未找到精确词条，以下是相关结果：
+            </div>
+            ${results.map(r => `
+                <div style="border:1px solid var(--border-color);border-radius:6px;padding:12px 16px;margin:8px 0;cursor:pointer;transition:all 0.2s;"
+                     onmouseover="this.style.borderColor='rgba(0,212,255,0.4)';this.style.background='rgba(0,212,255,0.05)'"
+                     onmouseout="this.style.borderColor='var(--border-color)';this.style.background=''"
+                     onclick="document.getElementById('searchInput').value='${r.title.replace(/'/g,"\\'")}';openWikiModal('${r.title.replace(/'/g,"\\'")}')">
+                    <div style="color:var(--primary-color);font-size:13px;margin-bottom:4px;">${r.title}</div>
+                    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">${r.snippet.replace(/<[^>]+>/g,'').substring(0,120)}...</div>
+                </div>
+            `).join('')}
+        `;
+    } catch {
+        loading.style.display = 'none';
+        errorEl.style.display = 'block';
+        errorEl.innerHTML = `<div style="opacity:0.5;">检索服务暂时不可用</div>`;
+    }
+}
+
+function processWikiHtml(html) {
+    // 创建临时DOM处理链接
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    // 修正图片链接
+    div.querySelectorAll('img').forEach(img => {
+        let src = img.getAttribute('src') || '';
+        if (src.startsWith('//')) src = 'https:' + src;
+        else if (src.startsWith('/')) src = 'https://santi.huijiwiki.com' + src;
+        img.src = src;
+        img.style.maxWidth = '100%';
+    });
+
+    // 修正内部wiki链接为弹窗内跳转
+    div.querySelectorAll('a[href]').forEach(a => {
+        const href = a.getAttribute('href') || '';
+        if (href.startsWith('/wiki/')) {
+            const pageName = decodeURIComponent(href.replace('/wiki/', '').split('#')[0]);
+            a.setAttribute('data-wiki-link', pageName);
+            a.setAttribute('href', '#');
+            a.title = `检索: ${pageName}`;
+        } else if (!href.startsWith('http')) {
+            // 相对链接 -> 绝对链接
+            a.href = 'https://santi.huijiwiki.com' + href;
+            a.target = '_blank';
+            a.rel = 'noopener';
+        }
+    });
+
+    return div.innerHTML;
+}
+
+// 暴露给 onclick 内联使用
+window.openWikiModal = openWikiModal;
