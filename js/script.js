@@ -913,32 +913,13 @@ function processWikiHtml(html) {
     const div = document.createElement('div');
     div.innerHTML = html;
 
-    // 修正图片链接 — 通过代理加载以绕过防盗链
+    // 直接隐藏所有图片（wiki图片因防盗链无法跨域加载）
     div.querySelectorAll('img').forEach(img => {
-        const originalSrc = img.getAttribute('src') || '';
-        if (!originalSrc) return;
-
-        const proxiedSrc = proxyImageUrl(originalSrc);
-        img.src = proxiedSrc;
-
-        // 同步处理 srcset（响应式图片）
-        const srcset = img.getAttribute('srcset');
-        if (srcset) {
-            const newSrcset = srcset.split(',').map(part => {
-                const [url, size] = part.trim().split(/\s+/);
-                if (!url) return part;
-                return size ? proxyImageUrl(url) + ' ' + size : proxyImageUrl(url);
-            }).join(', ');
-            img.srcset = newSrcset;
-        }
-
-        img.style.maxWidth = '100%';
-        img.style.borderRadius = '6px';
-        img.style.border = '1px solid var(--border-color)';
-        img.loading = 'lazy';
-
-        // 加载失败时隐藏破损图标
-        img.onerror = function() { this.style.display = 'none'; };
+        img.style.display = 'none';
+    });
+    // 同时隐藏只含图片的figure/图片容器，避免留下空白占位
+    div.querySelectorAll('figure, .thumb, .thumbinner, .floatright, .floatleft, .image').forEach(el => {
+        if (!el.textContent.trim()) el.style.display = 'none';
     });
 
     // 修正内部wiki链接为弹窗内跳转
