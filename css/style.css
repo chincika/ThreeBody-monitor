@@ -849,3 +849,67 @@ body.time-warping .orbit { border-color: var(--secondary-color); }
     margin: 16px 0; display: inline-block;
     min-width: 200px;
 }
+
+/* ============================================================
+   动态面板 — 预警/追踪系统通用控件
+   ============================================================ */
+
+/* 警报标签 */
+.alert-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 4px; margin-bottom: 16px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    font-family: var(--font-display); font-size: 11px;
+    letter-spacing: 2px; color: var(--text-muted);
+    transition: all 0.5s ease;
+}
+
+.alert-badge.warning {
+    background: rgba(255,107,53,0.1);
+    border-color: rgba(255,107,53,0.4);
+    color: #ff6b35;
+}
+
+.alert-badge.danger {
+    background: rgba(255,50,50,0.15);
+    border-color: rgba(255,50,50,0.5);
+    color: #ff3232;
+    animation: danger-pulse 1s ease-in-out infinite;
+}
+
+@keyframes danger-pulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(255,50,50,0.3); }
+    50% { box-shadow: 0 0 16px rgba(255,50,50,0.4); }
+}
+
+.alert-badge-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+}
+
+/* 面板切换动画 */
+#panel-waterdrop, #panel-darkforest, #panel-starship {
+    animation: panelFadeIn 0.4s ease both;
+}
+
+@keyframes panelFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 探测器预警面板特有 */
+#wdAlertBadge.danger .alert-badge-dot { background: #ff3232; }
+#wdDetectItem.detected { border-color: rgba(255,107,53,0.4); }
+#wdDetectItem.detected .data-value { color: #ff6b35 !important; }
+
+/* 暗森预警面板特有 */
+#dfAlertBadge.danger { background: rgba(255,50,50,0.12); border-color: rgba(255,50,50,0.45); color: #ff4444; }
+#dfUnknownItem.detected .data-value,
+#dfPhotonItem.detected .data-value { color: #ff6b35 !important; }
+#dfMsgItem.received .data-value { color: var(--secondary-color) !important; }
+
+/* 星舰追踪面板特有 */
+#ssSpeedC { font-size: 1.6em !important; }

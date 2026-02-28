@@ -111,85 +111,201 @@
             </div>
 
             <!-- 中间面板：舰队状态 -->
-            <div class="data-panel center-panel">
-                <div class="panel-header">
-                    <span class="panel-icon">◉</span>
-                    <span class="panel-title">舰队状态 / FLEET STATUS</span>
-                </div>
-                <div class="fleet-visual">
-                    <div class="fleet-display" id="fleet-visual">
-                        <div class="ship ship-1">▲</div>
-                        <div class="ship ship-2">▲</div>
-                        <div class="ship ship-3">▲</div>
+            <!-- 中间面板：动态切换 -->
+            <div class="data-panel center-panel" id="centerPanel">
+                <!-- 舰队状态 (默认/危机纪元前) -->
+                <div id="panel-fleet">
+                    <div class="panel-header">
+                        <span class="panel-icon">◉</span>
+                        <span class="panel-title">舰队状态 / FLEET STATUS</span>
                     </div>
-                    <div class="fleet-label">三体第一舰队 · 联合编队</div>
-                </div>
-                <div class="phase-display">
-                    <span class="phase-label">当前航行阶段</span>
-                    <span class="phase-value" id="speedPhase">--</span>
-                </div>
-                <div class="data-item highlight">
-                    <span class="data-label">航行速度</span>
-                    <div class="speed-readout">
-                        <span class="data-value large" id="speedC">0.000c</span>
-                        <span class="data-value small" id="speedValue">-- km/s</span>
+                    <div class="fleet-visual">
+                        <div class="fleet-display" id="fleet-visual">
+                            <div class="ship ship-1">▲</div>
+                            <div class="ship ship-2">▲</div>
+                            <div class="ship ship-3">▲</div>
+                        </div>
+                        <div class="fleet-label">三体第一舰队 · 联合编队</div>
                     </div>
-                </div>
-                <div class="progress-container">
-                    <span class="progress-label">最大速度进度 (参考值: 0.1c)</span>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="speedProgress"></div>
+                    <div class="phase-display">
+                        <span class="phase-label">当前航行阶段</span>
+                        <span class="phase-value" id="speedPhase">--</span>
+                    </div>
+                    <div class="data-item highlight">
+                        <span class="data-label">航行速度</span>
+                        <div class="speed-readout">
+                            <span class="data-value large" id="speedC">0.000c</span>
+                            <span class="data-value small" id="speedValue">-- km/s</span>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <span class="progress-label">最大速度进度 (参考值: 0.1c)</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="speedProgress"></div>
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="data-row-compact">
+                        <div class="data-item warning no-border">
+                            <span class="data-label">舰队损耗率</span>
+                            <span class="data-value" id="attritionValue">--%</span>
+                        </div>
+                        <div class="data-item no-border">
+                            <span class="data-label">航行时间</span>
+                            <span class="data-value small" id="attritionDetail">--</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="divider"></div>
-
-                <div class="data-row-compact">
-                    <div class="data-item warning no-border">
-                        <span class="data-label">舰队损耗率</span>
-                        <span class="data-value" id="attritionValue">--%</span>
+                <!-- 强互作用力宇宙探测器预警 (威慑纪元~广播纪元元年) -->
+                <div id="panel-waterdrop" style="display:none;">
+                    <div class="panel-header">
+                        <span class="panel-icon">⬡</span>
+                        <span class="panel-title">探测器预警 / WATERDROP ALERT</span>
                     </div>
-                    <div class="data-item no-border">
-                        <span class="data-label">航行时间</span>
-                        <span class="data-value small" id="attritionDetail">--</span>
+                    <div class="alert-badge" id="wdAlertBadge">
+                        <span class="alert-badge-dot"></span>
+                        <span id="wdAlertText">监控中</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">探测器形态</span>
+                        <span class="data-value" id="wdType">强互作用力探测器</span>
+                    </div>
+                    <div class="data-item highlight" id="wdDetectItem">
+                        <span class="data-label">探测器状态</span>
+                        <span class="data-value" id="wdDetected">◈ 未发现</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">已发现数量</span>
+                        <span class="data-value large" id="wdCount">0</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">距地球最近距离</span>
+                        <span class="data-value" id="wdDist">数据未知</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="data-item">
+                        <span class="data-label">威慑状态</span>
+                        <span class="data-value success" id="wdDeterrent">◉ 黑暗森林威慑 · 有效</span>
+                    </div>
+                    <div class="data-item" style="border-bottom:none;">
+                        <span class="data-label">威慑执行人</span>
+                        <span class="data-value small" id="wdHolder">罗辑 · 面壁者</span>
+                    </div>
+                </div>
+
+                <!-- 黑暗森林打击预警 (广播纪元~掩体纪元67年) -->
+                <div id="panel-darkforest" style="display:none;">
+                    <div class="panel-header">
+                        <span class="panel-icon">◬</span>
+                        <span class="panel-title">暗森预警 / DARK FOREST ALERT</span>
+                    </div>
+                    <div class="alert-badge" id="dfAlertBadge">
+                        <span class="alert-badge-dot"></span>
+                        <span id="dfAlertText">监控中</span>
+                    </div>
+                    <div class="data-item highlight" id="dfPhotonItem">
+                        <span class="data-label">光粒辐射监测</span>
+                        <span class="data-value" id="dfPhoton">◈ 未监测到</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">光粒距太阳系</span>
+                        <span class="data-value small" id="dfPhotonDist">数据未知</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="data-item highlight" id="dfUnknownItem">
+                        <span class="data-label">不明物体监测</span>
+                        <span class="data-value" id="dfUnknown">◈ 未监测到</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">不明物体距离</span>
+                        <span class="data-value small" id="dfUnknownDist">数据未知</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="data-item" style="border-bottom:none;" id="dfMsgItem">
+                        <span class="data-label">星际信息接收</span>
+                        <span class="data-value" id="dfMsg">◈ 未收到</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 右侧面板：距离监控 -->
-            <div class="data-panel right-panel">
-                <div class="panel-header">
-                    <span class="panel-icon">◈</span>
-                    <span class="panel-title">距离监控 / DISTANCE MONITOR</span>
-                </div>
-                <div class="data-item">
-                    <span class="data-label">距太阳系</span>
-                    <span class="data-value" id="distanceValue">-- 光年</span>
-                </div>
-                <div class="data-item">
-                    <span class="data-label">精确距离</span>
-                    <span class="data-value small" id="distanceKm">-- km</span>
-                </div>
-                <div class="progress-container">
-                    <span class="progress-label">总航行距离进度</span>
-                    <div class="progress-bar distance-bar">
-                        <div class="progress-fill distance-fill" id="distanceProgress"></div>
+            <!-- 右侧面板：动态切换 -->
+            <div class="data-panel right-panel" id="rightPanel">
+                <!-- 距离监控 (默认) -->
+                <div id="panel-distance">
+                    <div class="panel-header">
+                        <span class="panel-icon">◈</span>
+                        <span class="panel-title">距离监控 / DISTANCE MONITOR</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">距太阳系</span>
+                        <span class="data-value" id="distanceValue">-- 光年</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">精确距离</span>
+                        <span class="data-value small" id="distanceKm">-- km</span>
+                    </div>
+                    <div class="progress-container">
+                        <span class="progress-label">总航行距离进度</span>
+                        <div class="progress-bar distance-bar">
+                            <div class="progress-fill distance-fill" id="distanceProgress"></div>
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="data-item success">
+                        <span class="data-label">预计到达太阳系</span>
+                        <span class="data-value small" id="arrivalValue">--</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">剩余航程时间</span>
+                        <span class="data-value small" id="arrivalDetail">--</span>
+                    </div>
+                    <div class="progress-container small">
+                        <div class="progress-bar arrival-bar">
+                            <div class="progress-fill arrival-fill" id="arrivalProgress"></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="divider"></div>
-
-                <div class="data-item success">
-                    <span class="data-label">预计到达太阳系</span>
-                    <span class="data-value small" id="arrivalValue">--</span>
-                </div>
-                <div class="data-item">
-                    <span class="data-label">剩余航程时间</span>
-                    <span class="data-value small" id="arrivalDetail">--</span>
-                </div>
-                <div class="progress-container small">
-                    <div class="progress-bar arrival-bar">
-                        <div class="progress-fill arrival-fill" id="arrivalProgress"></div>
+                <!-- 星舰地球/银河系人类追踪系统 (危机纪元205年起) -->
+                <div id="panel-starship" style="display:none;">
+                    <div class="panel-header">
+                        <span class="panel-icon">◈</span>
+                        <span class="panel-title" id="starshipPanelTitle">星舰地球追踪 / STARSHIP TRACK</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">启航时间</span>
+                        <span class="data-value small" id="ssLaunch">危机纪元205年 · 公元2211年</span>
+                    </div>
+                    <div class="data-item highlight">
+                        <span class="data-label">当前速度</span>
+                        <div class="speed-readout">
+                            <span class="data-value large" id="ssSpeedC">0.000c</span>
+                            <span class="data-value small" id="ssSpeedKms">-- km/s</span>
+                        </div>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">距太阳系</span>
+                        <span class="data-value" id="ssDistLy">-- 光年</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">精确距离</span>
+                        <span class="data-value small" id="ssDistKm">-- km</span>
+                    </div>
+                    <div class="progress-container">
+                        <span class="progress-label" id="ssProgressLabel">总航行进度</span>
+                        <div class="progress-bar distance-bar">
+                            <div class="progress-fill distance-fill" id="ssProgress"></div>
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="data-item">
+                        <span class="data-label">航线终点</span>
+                        <span class="data-value small" id="ssTarget">NH558J2星系 · 18光年</span>
+                    </div>
+                    <div class="data-item" style="border-bottom:none;">
+                        <span class="data-label">预计到达 / 剩余</span>
+                        <span class="data-value small" id="ssArrival">--</span>
                     </div>
                 </div>
             </div>

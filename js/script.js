@@ -193,6 +193,9 @@ function updateDashboard() {
             : `公元 ${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
     }
 
+    // 5. 动态面板更新（每帧都调用以保证平滑数字）
+    updateDynamicPanels(_titleYear);
+
     // 4. 非穿梭模式下，跟随真实年份显示事件（年份变化时才刷新）
     if (!IS_SIMULATING) {
         const currentYear = now.getFullYear();
@@ -216,10 +219,9 @@ function initWarpController() {
     if (!panel || !slider || !resetBtn || !warpModeBtn) return;
 
     const totalDuration = PHASE_META[PHASE_META.length-1].endTime;
-    const arrivalYear = Math.ceil(JOURNEY_START_YEAR + totalDuration);
     
-    const minYear = JOURNEY_START_YEAR;
-    const maxYear = arrivalYear;
+    const minYear = JOURNEY_START_YEAR; // 1982
+    const maxYear = 2403;               // 掩体纪元67年 · 时间轴末尾
     slider.min = minYear;
     slider.max = maxYear;
     yearInput.min = minYear;
@@ -690,6 +692,288 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
  
+
+
+
+// ============================================================
+// 动态面板切换系统
+// ============================================================
+
+// 纪元常量
+const ERA_CRISIS_START    = 2007;   // 危机纪元元年
+const ERA_DETERRENCE_START= 2214;   // 威慑纪元元年
+const ERA_BROADCAST_START = 2276;   // 广播纪元元年
+const ERA_SHELTER_START   = 2337;   // 掩体纪元元年
+const ERA_SHELTER_END     = 2403;   // 掩体纪元67年末
+const ERA_GALAXY_START    = 2281;   // 银河纪元元年
+const STARSHIP_LAUNCH     = 2211;   // 危机纪元205年，星舰出发
+
+// 星舰物理常量
+const SS_MAX_SPEED_C      = 0.15;
+const SS_MAX_SPEED_KMS    = LIGHT_SPEED_KM_S * SS_MAX_SPEED_C;
+const SS_ACCEL_DURATION   = 50;     // 加速阶段年数
+const SS_TARGET_DIST_LY   = 18;     // NH558J2距离
+// 加速阶段距离: 0.5 * v_max * t
+const SS_ACCEL_DIST_KM    = 0.5 * SS_MAX_SPEED_KMS * (SS_ACCEL_DURATION * 365.25 * 24 * 3600);
+const SS_ACCEL_DIST_LY    = SS_ACCEL_DIST_KM / LY_TO_KM;
+// 到达NH558J2年数: 50(加速) + (18-3.75)/0.15 = 50+95 = 145年
+const SS_ARRIVE_NH_YEARS  = SS_ACCEL_DURATION + (SS_TARGET_DIST_LY - SS_ACCEL_DIST_LY) / SS_MAX_SPEED_C;
+const SS_ARRIVE_NH_YEAR   = STARSHIP_LAUNCH + SS_ARRIVE_NH_YEARS; // ~2356
+
+// 银河纪元300年殖民完成
+const GALAXY_300_YEAR     = ERA_GALAXY_START + 300 - 1; // 2580
+
+// 计算星舰状态
+function calcStarshipState(year) {
+    const elapsed = year - STARSHIP_LAUNCH;
+    if (elapsed <= 0) return null;
+
+    const elapsedSec = elapsed * 365.25 * 24 * 3600;
+    let distKm, speedKms;
+
+    if (elapsed <= SS_ACCEL_DURATION) {
+        const accelRate = SS_MAX_SPEED_KMS / (SS_ACCEL_DURATION * 365.25 * 24 * 3600);
+        speedKms = accelRate * elapsedSec;
+        distKm   = 0.5 * accelRate * elapsedSec * elapsedSec;
+    } else {
+        const cruiseSec = (elapsed - SS_ACCEL_DURATION) * 365.25 * 24 * 3600;
+        speedKms = SS_MAX_SPEED_KMS;
+        distKm   = SS_ACCEL_DIST_KM + SS_MAX_SPEED_KMS * cruiseSec;
+    }
+
+    return {
+        elapsed,
+        distKm,
+        distLy: distKm / LY_TO_KM,
+        speedKms,
+        speedC: speedKms / LIGHT_SPEED_KM_S,
+    };
+}
+
+// 获取当前面板模式
+function getPanelMode(year) {
+    return {
+        // center panel
+        center: year >= ERA_DETERRENCE_START && year < ERA_BROADCAST_START
+            ? 'waterdrop'
+            : (year >= ERA_BROADCAST_START && year <= ERA_SHELTER_END)
+                ? 'darkforest'
+                : 'fleet',
+        // right panel
+        right: (year >= ERA_CRISIS_START + 204 && year <= ERA_SHELTER_END)
+            ? 'starship'
+            : 'distance',
+    };
+}
+
+let _lastPanelMode = { center: null, right: null };
+
+function updateDynamicPanels(year) {
+    const mode = getPanelMode(year);
+
+    // Center panel switching
+    if (mode.center !== _lastPanelMode.center) {
+        document.getElementById('panel-fleet').style.display      = mode.center === 'fleet'       ? '' : 'none';
+        document.getElementById('panel-waterdrop').style.display  = mode.center === 'waterdrop'   ? '' : 'none';
+        document.getElementById('panel-darkforest').style.display = mode.center === 'darkforest'  ? '' : 'none';
+        _lastPanelMode.center = mode.center;
+    }
+
+    // Right panel switching
+    if (mode.right !== _lastPanelMode.right) {
+        document.getElementById('panel-distance').style.display  = mode.right === 'distance' ? '' : 'none';
+        document.getElementById('panel-starship').style.display  = mode.right === 'starship' ? '' : 'none';
+        _lastPanelMode.right = mode.right;
+    }
+
+    // Update content based on mode
+    if (mode.center === 'waterdrop') updateWaterdropPanel(year);
+    if (mode.center === 'darkforest') updateDarkForestPanel(year);
+    if (mode.right  === 'starship')  updateStarshipPanel(year);
+}
+
+// --- 强互作用力宇宙探测器预警 ---
+function updateWaterdropPanel(year) {
+    const deterrenceYear = year - ERA_DETERRENCE_START + 1; // 威慑纪元第N年
+
+    // 威慑纪元62年(公元2275) = 水滴现身，威慑终结
+    const isWaterdropEvent = (year >= 2275);
+
+    const badge    = document.getElementById('wdAlertBadge');
+    const alertTxt = document.getElementById('wdAlertText');
+    const detected = document.getElementById('wdDetected');
+    const count    = document.getElementById('wdCount');
+    const dist     = document.getElementById('wdDist');
+    const detectItem = document.getElementById('wdDetectItem');
+    const deterEl  = document.getElementById('wdDeterrent');
+    const holderEl = document.getElementById('wdHolder');
+
+    if (isWaterdropEvent) {
+        badge.className = 'alert-badge danger';
+        alertTxt.textContent = '危急 — 威慑终结 DETERRENCE BROKEN';
+        detected.textContent = '⚠ 已确认 — 探测器逼近';
+        detectItem.className = 'data-item highlight detected';
+        count.textContent = '10';
+        dist.textContent = '约 1,500 万 km';
+        deterEl.className = 'data-value';
+        deterEl.style.color = '#ff3232';
+        deterEl.textContent = '✕ 威慑已终止 · 叶文洁广播触发';
+        holderEl.style.display = 'none';
+    } else {
+        badge.className = 'alert-badge';
+        alertTxt.textContent = '正常 — 威慑运行中 DETERRENCE ACTIVE';
+        detected.textContent = '◈ 未发现异常';
+        detectItem.className = 'data-item highlight';
+        count.textContent = '0';
+        dist.textContent = '数据未知';
+        deterEl.className = 'data-value success';
+        deterEl.style.color = '';
+        deterEl.textContent = '◉ 黑暗森林威慑 · 有效';
+        if (holderEl) holderEl.style.display = '';
+    }
+}
+
+// --- 黑暗森林打击预警 ---
+function updateDarkForestPanel(year) {
+    const badge     = document.getElementById('dfAlertBadge');
+    const alertTxt  = document.getElementById('dfAlertText');
+    const photon    = document.getElementById('dfPhoton');
+    const photonDist= document.getElementById('dfPhotonDist');
+    const photonItem= document.getElementById('dfPhotonItem');
+    const unknown   = document.getElementById('dfUnknown');
+    const unknownDst= document.getElementById('dfUnknownDist');
+    const unknownItm= document.getElementById('dfUnknownItem');
+    const msg       = document.getElementById('dfMsg');
+    const msgItem   = document.getElementById('dfMsgItem');
+
+    // 掩体纪元67年(2403) — 二向箔
+    // 掩体纪元66年(2402) — 不明巨型飞行物 1.3光年
+    // 掩体纪元62年(2398) — 银河系人类引力波信息
+    // 广播纪元8年(2283)  — 曲率航迹不明物体
+
+    let alertClass = 'alert-badge';
+    let alertText  = '监控中 / MONITORING';
+
+    // 光粒辐射
+    photon.textContent = '◈ 未监测到';
+    photonDist.textContent = '数据未知';
+    photonItem.className = 'data-item highlight';
+
+    // 不明物体
+    unknown.textContent = '◈ 未监测到';
+    unknownDst.textContent = '数据未知';
+    unknownItm.className = 'data-item highlight';
+
+    // 信息
+    msg.textContent = '◈ 未收到';
+    msgItem.className = 'data-item';
+    msgItem.style.borderBottom = '';
+
+    if (year >= 2403) {
+        // 掩体纪元67年 — 二向箔
+        alertClass = 'alert-badge danger';
+        alertText  = '极度危险 — 二维打击确认 2D STRIKE CONFIRMED';
+        unknown.textContent = '⚠ 二向箔 — 降维打击已触发';
+        unknownDst.textContent = '太阳系内 / 降维进行中';
+        unknownItm.className = 'data-item highlight detected';
+    } else if (year >= 2402) {
+        // 掩体纪元66年 — 不明巨型飞行物
+        alertClass = 'alert-badge danger';
+        alertText  = '高度警戒 — 不明目标逼近 UNKNOWN CONTACT';
+        unknown.textContent = '⚠ 监测到不明巨型飞行物';
+        unknownDst.textContent = '约 1.3 光年';
+        unknownItm.className = 'data-item highlight detected';
+    } else if (year >= 2398) {
+        // 掩体纪元62年 — 引力波信息
+        alertClass = 'alert-badge warning';
+        alertText  = '注意 — 接收到星际信息 MESSAGE RECEIVED';
+        msg.textContent = '◉ 已接收银河系人类引力波信息';
+        msgItem.className = 'data-item received';
+        msgItem.style.borderBottom = 'none';
+    } else if (year >= 2283) {
+        // 广播纪元8年起 — 曲率航迹
+        alertClass = 'alert-badge warning';
+        alertText  = '注意 — 检测到异常航迹 ANOMALY DETECTED';
+        unknown.textContent = '◉ 监测到曲率航迹';
+        unknownDst.textContent = '方位追踪中...';
+        unknownItm.className = 'data-item highlight detected';
+    }
+
+    badge.className = alertClass;
+    alertTxt.textContent = alertText;
+
+    // 掩体纪元后期样式
+    if (year >= 2402) {
+        badge.style.setProperty('--badge-color', '#ff3232');
+    }
+}
+
+// --- 星舰地球/银河系人类追踪 ---
+function updateStarshipPanel(year) {
+    const ss = calcStarshipState(year);
+    if (!ss) return;
+
+    const isGalaxy = year >= ERA_GALAXY_START;
+    const isColonized = year >= GALAXY_300_YEAR;
+
+    // 面板标题
+    const titleEl = document.getElementById('starshipPanelTitle');
+    if (isGalaxy) {
+        titleEl.textContent = '银河系人类追踪 / GALAXY HUMAN TRACK';
+    } else {
+        titleEl.textContent = '星舰地球追踪 / STARSHIP EARTH TRACK';
+    }
+
+    // 速度
+    const noise = (Math.random() - 0.5) * 0.00001;
+    const displaySpeedKms = ss.speedKms > 0 ? ss.speedKms + noise : 0;
+    document.getElementById('ssSpeedC').textContent   = ss.speedC.toFixed(4) + 'c';
+    document.getElementById('ssSpeedKms').textContent = displaySpeedKms.toFixed(3) + ' km/s';
+
+    // 距离
+    document.getElementById('ssDistLy').textContent  = '距太阳系 ' + ss.distLy.toFixed(4) + ' 光年';
+    const kmStr = (ss.distKm).toLocaleString('en-US', {maximumFractionDigits: 0});
+    document.getElementById('ssDistKm').textContent  = kmStr + ' km';
+
+    // 目标与进度
+    let targetDesc, progressPct, arrivalText, progressLabel;
+
+    if (isColonized) {
+        // 银河纪元300年后 — 已完成殖民
+        targetDesc    = '未知星球 · 已殖民定居';
+        progressPct   = 100;
+        progressLabel = '航程完成 · 已殖民';
+        arrivalText   = '公元 ' + GALAXY_300_YEAR + ' 年 · 殖民完成';
+    } else if (isGalaxy) {
+        // 银河纪元 — 目标未知，继续航行
+        const traveledSinceNH = ss.distLy - SS_TARGET_DIST_LY;
+        targetDesc = '深空航行 · 目标未公开';
+        // 以银河纪元300年的51.6光年为参考满额
+        const refDist = 51.6;
+        progressPct   = Math.min(100, (ss.distLy / refDist) * 100);
+        progressLabel = '深空航行进度 (参考: 银河纪元300年)';
+        const remainYr = GALAXY_300_YEAR - year;
+        arrivalText = remainYr > 0 ? `预计殖民完成: 公元${GALAXY_300_YEAR}年 (还需${remainYr.toFixed(0)}年)` : '殖民进行中';
+    } else {
+        // 前往NH558J2
+        targetDesc = 'NH558J2 星系 · 18 光年';
+        progressPct = Math.min(100, (ss.distLy / SS_TARGET_DIST_LY) * 100);
+        progressLabel = '前往NH558J2进度';
+        const remainDist = SS_TARGET_DIST_LY - ss.distLy;
+        if (remainDist > 0) {
+            const remainYr = remainDist / SS_MAX_SPEED_C;
+            const arriveYr = year + remainYr;
+            arrivalText = `公元 ${Math.ceil(arriveYr)} 年 · 剩余约 ${remainYr.toFixed(1)} 年`;
+        } else {
+            arrivalText = '已抵达NH558J2星系附近';
+        }
+    }
+
+    document.getElementById('ssTarget').textContent       = targetDesc;
+    document.getElementById('ssProgressLabel').textContent= progressLabel;
+    document.getElementById('ssProgress').style.width     = progressPct + '%';
+    document.getElementById('ssArrival').textContent      = arrivalText;
+}
 
 // ============================================================
 // 系统信息检索 — 三体Wiki 查询
