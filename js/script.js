@@ -754,8 +754,37 @@ function closeWikiModal() {
     document.body.style.overflow = '';
 }
 
+// 构建带CORS代理的请求URL（多个备用代理依次尝试）
+async function fetchWithCORSFallback(url) {
+    // 先尝试直连（部分wiki可能已配置CORS）
+    const proxies = [
+        (u) => u,  // 直连
+        (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+        (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+    ];
+
+    for (let i = 0; i < proxies.length; i++) {
+        try {
+            const proxyUrl = proxies[i](url);
+            const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+            if (!res.ok) continue;
+
+            // allorigins 返回包裹格式 { contents: "..." }
+            if (proxyUrl.includes('allorigins')) {
+                const wrapper = await res.json();
+                const text = wrapper.contents;
+                return JSON.parse(text);
+            }
+            return await res.json();
+        } catch (e) {
+            if (i === proxies.length - 1) throw e;
+            // 继续尝试下一个代理
+        }
+    }
+}
+
 async function fetchWikiPage(query, titleEl, linkEl, loading, contentEl, errorEl) {
-    // 使用MediaWiki API获取页面内容（HTML格式），支持CORS
+    // 使用MediaWiki API获取页面内容（HTML格式），多代理自动切换
     const apiBase = 'https://santi.huijiwiki.com/api.php';
     const params = new URLSearchParams({
         action: 'parse',
@@ -767,13 +796,7 @@ async function fetchWikiPage(query, titleEl, linkEl, loading, contentEl, errorEl
     });
 
     try {
-        const response = await fetch(`${apiBase}?${params}`, {
-            headers: { 'Accept': 'application/json' }
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
+        const data = await fetchWithCORSFallback(`${apiBase}?${params}`);
 
         if (data.error) {
             // 页面不存在，尝试搜索
@@ -839,8 +862,7 @@ async function searchWikiSuggestions(query, titleEl, loading, contentEl, errorEl
     });
 
     try {
-        const r = await fetch(`${apiBase}?${params}`);
-        const data = await r.json();
+        const data = await fetchWithCORSFallback(`${apiBase}?${params}`);
         const results = data?.query?.search || [];
 
         titleEl.textContent = `搜索结果: "${query}"`;
