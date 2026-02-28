@@ -194,7 +194,7 @@ function updateDashboard() {
     }
 
     // 5. 动态面板更新（每帧都调用以保证平滑数字）
-    updateDynamicPanels(_titleYear);
+    updateDynamicPanels(now);
 
     // 4. 非穿梭模式下，跟随真实年份显示事件（年份变化时才刷新）
     if (!IS_SIMULATING) {
@@ -723,26 +723,30 @@ const SS_ARRIVE_NH_YEAR   = STARSHIP_LAUNCH + SS_ARRIVE_NH_YEARS; // ~2356
 // 银河纪元300年殖民完成
 const GALAXY_300_YEAR     = ERA_GALAXY_START + 300 - 1; // 2580
 
-// 计算星舰状态
-function calcStarshipState(year) {
-    const elapsed = year - STARSHIP_LAUNCH;
-    if (elapsed <= 0) return null;
+// 计算星舰状态 — 接受 Date 对象，毫秒精度，与 updateFleetStatus 同等机制
+const SS_LAUNCH_DATE = new Date(STARSHIP_LAUNCH + '-01-01T00:00:00');
+const SS_ACCEL_DURATION_MS = SS_ACCEL_DURATION * 365.25 * 24 * 3600 * 1000;
 
-    const elapsedSec = elapsed * 365.25 * 24 * 3600;
+function calcStarshipState(now) {
+    const elapsedMs = now - SS_LAUNCH_DATE;
+    if (elapsedMs <= 0) return null;
+
+    const elapsedSec = elapsedMs / 1000;
+    const accelDurSec = SS_ACCEL_DURATION * 365.25 * 24 * 3600;
     let distKm, speedKms;
 
-    if (elapsed <= SS_ACCEL_DURATION) {
-        const accelRate = SS_MAX_SPEED_KMS / (SS_ACCEL_DURATION * 365.25 * 24 * 3600);
+    if (elapsedMs <= SS_ACCEL_DURATION_MS) {
+        const accelRate = SS_MAX_SPEED_KMS / accelDurSec;
         speedKms = accelRate * elapsedSec;
         distKm   = 0.5 * accelRate * elapsedSec * elapsedSec;
     } else {
-        const cruiseSec = (elapsed - SS_ACCEL_DURATION) * 365.25 * 24 * 3600;
+        const cruiseSec = (elapsedMs - SS_ACCEL_DURATION_MS) / 1000;
         speedKms = SS_MAX_SPEED_KMS;
         distKm   = SS_ACCEL_DIST_KM + SS_MAX_SPEED_KMS * cruiseSec;
     }
 
     return {
-        elapsed,
+        elapsedYears: elapsedMs / (365.25 * 24 * 3600 * 1000),
         distKm,
         distLy: distKm / LY_TO_KM,
         speedKms,
@@ -768,7 +772,8 @@ function getPanelMode(year) {
 
 let _lastPanelMode = { center: null, right: null };
 
-function updateDynamicPanels(year) {
+function updateDynamicPanels(now) {
+    const year = now.getFullYear();
     const mode = getPanelMode(year);
 
     // Center panel switching
@@ -789,7 +794,7 @@ function updateDynamicPanels(year) {
     // Update content based on mode
     if (mode.center === 'waterdrop') updateWaterdropPanel(year);
     if (mode.center === 'darkforest') updateDarkForestPanel(year);
-    if (mode.right  === 'starship')  updateStarshipPanel(year);
+    if (mode.right  === 'starship')  updateStarshipPanel(now, year);
 }
 
 // --- 强互作用力宇宙探测器预警 ---
@@ -909,8 +914,8 @@ function updateDarkForestPanel(year) {
 }
 
 // --- 星舰地球/银河系人类追踪 ---
-function updateStarshipPanel(year) {
-    const ss = calcStarshipState(year);
+function updateStarshipPanel(now, year) {
+    const ss = calcStarshipState(now);
     if (!ss) return;
 
     const isGalaxy = year >= ERA_GALAXY_START;
