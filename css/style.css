@@ -126,6 +126,13 @@ body {
     border-radius: 4px;
 }
 
+.connection-status .status-text {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--success-color);
+    opacity: 1;
+}
+
 .status-dot {
     width: 8px; height: 8px;
     background-color: var(--success-color); border-radius: 50%;
@@ -445,6 +452,13 @@ body.time-warping .orbit { border-color: var(--secondary-color); }
 .separator { color: var(--border-color); }
 
 .status-bar { display: flex; align-items: center; justify-content: center; gap: 15px; }
+
+.status-text {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--primary-color);
+    opacity: 0.7;
+}
 
 .deco-line { height: 1px; background: var(--border-color); flex: 1; max-width: 150px; }
 
