@@ -810,8 +810,9 @@ function updateWaterdropPanel(year) {
     const count    = document.getElementById('wdCount');
     const dist     = document.getElementById('wdDist');
     const detectItem = document.getElementById('wdDetectItem');
-    const deterEl  = document.getElementById('wdDeterrent');
-    const holderEl = document.getElementById('wdHolder');
+    const deterEl    = document.getElementById('wdDeterrent');
+    const holderRow  = document.getElementById('wdHolderRow');
+    const breakRow   = document.getElementById('wdBreakRow');
 
     if (isWaterdropEvent) {
         badge.className = 'alert-badge danger';
@@ -822,8 +823,9 @@ function updateWaterdropPanel(year) {
         dist.textContent = '约 1,500 万 km';
         deterEl.className = 'data-value';
         deterEl.style.color = '#ff3232';
-        deterEl.textContent = '✕ 威慑已终止 · 叶文洁广播触发';
-        holderEl.style.display = 'none';
+        deterEl.textContent = '✕ 威慑已终止';
+        if (holderRow) holderRow.style.display = 'none';
+        if (breakRow)  breakRow.style.display  = '';
     } else {
         badge.className = 'alert-badge';
         alertTxt.textContent = '正常 — 威慑运行中 DETERRENCE ACTIVE';
@@ -834,7 +836,8 @@ function updateWaterdropPanel(year) {
         deterEl.className = 'data-value success';
         deterEl.style.color = '';
         deterEl.textContent = '◉ 黑暗森林威慑 · 有效';
-        if (holderEl) holderEl.style.display = '';
+        if (holderRow) holderRow.style.display = '';
+        if (breakRow)  breakRow.style.display  = 'none';
     }
 }
 
