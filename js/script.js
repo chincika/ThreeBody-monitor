@@ -168,7 +168,14 @@ function updateDashboard() {
     // 2. 更新航行数据
     updateFleetStatus(now);
 
-    // 3. 非穿梭模式下，跟随真实年份显示事件（年份变化时才刷新）
+    // 3. 动态标题 & 页脚
+    const _titleYear = IS_SIMULATING
+        ? (new Date(new Date().getTime() + SIMULATED_TIME_OFFSET)).getFullYear()
+        : now.getFullYear();
+    updateTitle(_titleYear);
+    updateFooter(_titleYear);
+
+    // 4. 非穿梭模式下，跟随真实年份显示事件（年份变化时才刷新）
     if (!IS_SIMULATING) {
         const currentYear = now.getFullYear();
         if (currentYear !== LAST_DISPLAYED_YEAR) {
@@ -521,6 +528,124 @@ function clearChronicleEvents() {
     const badge = document.getElementById('eventsYearBadge');
     if (badge) badge.textContent = '--';
     if (list) list.innerHTML = '<div class="events-empty">◈ 开启时空穿梭后，拖动时间轴查看该年发生的事件</div>';
+}
+
+
+// ===== 动态标题配置 =====
+// ── 年份速查 ──────────────────────────────────────────────────────────
+// 危机纪元  : 2007(元年) 2135(129年) 2136(130年) 2205(199年) 2211(205年) 2214(208年/末)
+// 威慑纪元  : 2214(元年) 2215(2年)  2275(62年/末)
+// 广播纪元  : 2276(元年) 2283(8年)  2336(末)
+// 掩体纪元  : 2337(元年) 2338(2年)  2403(67年/末)
+
+// 标题配置：en=英文大标题，zh=中文副标题（含望远镜注释）
+const TITLE_CONFIG = [
+    {
+        minYear: -Infinity, maxYear: 2006,
+        en: 'NASA EARLY WARNING CENTER',
+        zh: '美国航空航天局预警中心（哈勃系列太空望远镜）',
+    },
+    {
+        minYear: 2007, maxYear: 2135,
+        en: 'UN PLANETARY DEFENSE COUNCIL · WARNING SYSTEM',
+        zh: '联合国行星防御理事会太空预警系统（哈勃系列太空望远镜）',
+    },
+    {
+        minYear: 2136, maxYear: 2210,
+        en: 'SOLAR SYSTEM FLEET · SPACE WARNING SYSTEM',
+        zh: '太阳系舰队太空预警系统（哈勃系列太空望远镜）',
+    },
+    {
+        minYear: 2211, maxYear: 2337,
+        en: 'SOLAR SYSTEM FLEET · SPACE WARNING SYSTEM',
+        zh: '太阳系舰队太空预警系统（林格-斐兹罗太空望远镜）',
+    },
+    {
+        minYear: 2338, maxYear: 2403,
+        en: 'SOLAR WARNING SYSTEM · CONTROL CENTER',
+        zh: '太阳系预警系统控制中心',
+    },
+];
+
+// 页脚配置：org=机构, source=数据来源
+const FOOTER_CONFIG = [
+    {
+        minYear: -Infinity, maxYear: 2006,
+        org:       '三体舰队跟踪计划 · 美国航空航天局',
+        source:    '数据来源: 尘埃云航迹推断 & ETO 资料',
+        statusBar: 'FLEET TRACKING PROGRAM | NASA',
+    },
+    {
+        minYear: 2007, maxYear: 2135,
+        org:       '三体舰队跟踪计划 · 行星防御理事会',
+        source:    '数据来源: 尘埃云航迹推断 & ETO 资料',
+        statusBar: 'FLEET TRACKING PROGRAM | UN PLANETARY DEFENSE COUNCIL',
+    },
+    {
+        minYear: 2136, maxYear: 2214,
+        org:       '三体舰队跟踪计划 · 太阳系舰队总参谋部',
+        source:    '数据来源: 尘埃云航迹推断 & ETO 资料',
+        statusBar: 'FLEET TRACKING PROGRAM | SOLAR FLEET GENERAL STAFF',
+    },
+    {
+        minYear: 2215, maxYear: 2275,
+        org:       '强互作用力宇宙探测器预警计划 · 太阳系舰队总参谋部',
+        source:    '数据来源: 太空望远镜监测',
+        statusBar: 'WATERDROP WARNING PROGRAM | SOLAR FLEET GENERAL STAFF',
+    },
+    {
+        minYear: 2276, maxYear: 2283,
+        org:       '黑暗森林打击预警计划 · 太阳系预警系统',
+        source:    '数据来源: 太空望远镜监测',
+        statusBar: 'DARK FOREST STRIKE WARNING | SOLAR WARNING SYSTEM',
+    },
+    {
+        minYear: 2284, maxYear: 2403,
+        org:       '黑暗森林打击预警计划 · 太阳系预警系统',
+        source:    '数据来源: 太空望远镜监测 & 曲率航迹观测',
+        statusBar: 'DARK FOREST STRIKE WARNING | SOLAR WARNING SYSTEM',
+    },
+];
+
+let LAST_TITLE_YEAR = null;
+
+function updateTitle(year) {
+    if (year === LAST_TITLE_YEAR) return;
+    LAST_TITLE_YEAR = year;
+
+    const titleEl    = document.getElementById('mainTitle');
+    const subtitleEl = document.getElementById('mainSubtitle');
+    if (!titleEl || !subtitleEl) return;
+
+    const cfg   = TITLE_CONFIG.find(c => year >= c.minYear && year <= c.maxYear);
+    const newEn = cfg ? cfg.en : 'THREE BODY FLEET MONITOR';
+    const newZh = cfg ? cfg.zh : '三体舰队运行监控';
+
+    if (titleEl.textContent === newEn && subtitleEl.textContent === newZh) return;
+
+    titleEl.classList.remove('title-transition');
+    subtitleEl.classList.remove('title-transition');
+    void titleEl.offsetWidth; // 强制回流，重播动画
+
+    titleEl.classList.add('title-transition');
+    subtitleEl.classList.add('title-transition');
+    titleEl.textContent    = newEn;
+    subtitleEl.textContent = newZh;
+}
+
+function updateFooter(year) {
+    const orgEl       = document.getElementById('footerOrg');
+    const sourceEl    = document.getElementById('footerSource');
+    const statusBarEl = document.getElementById('footerStatusBar');
+    if (!orgEl || !sourceEl) return;
+
+    const cfg = FOOTER_CONFIG.find(c => year >= c.minYear && year <= c.maxYear);
+    if (!cfg) return;
+
+    if (orgEl.textContent       !== cfg.org)       orgEl.textContent       = cfg.org;
+    if (sourceEl.textContent    !== cfg.source)    sourceEl.textContent    = cfg.source;
+    if (statusBarEl && statusBarEl.textContent !== cfg.statusBar)
+        statusBarEl.textContent = cfg.statusBar;
 }
 
 function createStars() {}

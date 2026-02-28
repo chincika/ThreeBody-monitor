@@ -75,7 +75,7 @@ body {
 
 /* --- 页眉 --- */
 .header {
-    display: flex; justify-content: space-between; align-items: center;
+    display: flex; justify-content: space-between; align-items: flex-start;
     padding: 20px 30px;
     background: var(--panel-bg); border: 1px solid var(--border-color);
     border-radius: 10px; margin-bottom: 20px;
@@ -89,7 +89,7 @@ body {
     background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
 }
 
-.logo { display: flex; align-items: center; gap: 20px; }
+.logo { display: flex; align-items: flex-start; gap: 20px; }
 
 .logo-icon { width: 50px; height: 50px; position: relative; }
 
@@ -109,13 +109,37 @@ body {
     to   { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-.title-group { display: flex; flex-direction: column; }
+.title-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    /* 不限制最大宽度，让标题尽量撑满可用空间 */
+}
+
+
+/* --- 动态标题切换动画 --- */
+@keyframes titleFadeIn {
+    from { opacity: 0; transform: translateY(-4px) scaleX(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scaleX(1); }
+}
+
+.title-transition {
+    animation: titleFadeIn 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
 
 .title {
-    font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 900;
-    letter-spacing: 4px; color: var(--primary-color);
+    font-family: 'Orbitron', sans-serif;
+    /* 随容器宽度自动缩小，强制单行不换行 */
+    font-size: clamp(9px, 1.3vw, 28px);
+    font-weight: 900;
+    letter-spacing: clamp(0.5px, 0.15vw, 4px);
+    color: var(--primary-color);
     text-shadow: 0 0 20px var(--glow-color);
+    white-space: nowrap;   /* 强制单行 */
+    overflow: visible;     /* 不裁切，让容器决定 */
 }
+
 
 .subtitle { font-size: 12px; color: var(--text-muted); letter-spacing: 2px; margin-top: 2px; }
 
