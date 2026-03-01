@@ -1044,51 +1044,58 @@ function closeWikiModal() {
     const overlay = document.getElementById('wikiModalOverlay');
     overlay.classList.remove('active');
     document.body.style.overflow = '';
-}
-
-// 构建带CORS代理的请求URL（多个备用代理依次尝试）
-async function fetchWithCORSFallback(url) {
-    // 先尝试直连（部分wiki可能已配置CORS）
-    const proxies = [
-        (u) => u,  // 直连
-        (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-        (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-    ];
-
-    for (let i = 0; i < proxies.length; i++) {
-        try {
-            const proxyUrl = proxies[i](url);
-            const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
-            if (!res.ok) continue;
-
-            // allorigins 返回包裹格式 { contents: "..." }
-            if (proxyUrl.includes('allorigins')) {
-                const wrapper = await res.json();
-                const text = wrapper.contents;
-                return JSON.parse(text);
-            }
-            return await res.json();
-        } catch (e) {
-            if (i === proxies.length - 1) throw e;
-            // 继续尝试下一个代理
-        }
+    // 清空搜索框并重新聚焦，方便直接输入下一个关键词
+    const input = document.getElementById('searchInput');
+    if (input) {
+        input.value = '';
+        input.focus();
     }
 }
 
-async function fetchWikiPage(query, titleEl, linkEl, loading, contentEl, errorEl) {
-    // 使用MediaWiki API获取页面内容（HTML格式），多代理自动切换
-    const apiBase = 'https://santi.huijiwiki.com/api.php';
-    const params = new URLSearchParams({
-        action: 'parse',
-        page: query,
-        format: 'json',
-        prop: 'text|displaytitle',
-        disableeditsection: '1',
-        origin: '*'
+// ── Wiki 请求：使用 JSONP，完全绕开 CORS，无需任何代理 ──────
+// JSONP 通过动态 <script> 标签加载数据，浏览器不做跨域拦截
+// 中国境内外用户均可直接使用，不依赖任何第三方代理服务
+
+function fetchJSONP(url, timeout = 15000) {
+    return new Promise((resolve, reject) => {
+        // 生成唯一回调函数名
+        const cbName = '_wiki_cb_' + Math.random().toString(36).slice(2);
+        let timer;
+
+        window[cbName] = (data) => {
+            clearTimeout(timer);
+            delete window[cbName];
+            script.remove();
+            resolve(data);
+        };
+
+        const script = document.createElement('script');
+        // MediaWiki 支持 format=json + callback=xxx 返回 JSONP
+        script.src = url + '&callback=' + cbName;
+        script.onerror = () => {
+            clearTimeout(timer);
+            delete window[cbName];
+            script.remove();
+            reject(new Error('JSONP 请求失败'));
+        };
+
+        timer = setTimeout(() => {
+            delete window[cbName];
+            script.remove();
+            reject(new Error('请求超时'));
+        }, timeout);
+
+        document.head.appendChild(script);
     });
+}
+
+async function fetchWikiPage(query, titleEl, linkEl, loading, contentEl, errorEl) {
+    const apiBase = 'https://santi.huijiwiki.com/api.php';
+    // JSONP 不支持 URLSearchParams 直接拼，手动拼接（不含 callback，fetchJSONP 会加）
+    const params = `action=parse&page=${encodeURIComponent(query)}&format=json&prop=text%7Cdisplaytitle&disableeditsection=1`;
 
     try {
-        const data = await fetchWithCORSFallback(`${apiBase}?${params}`);
+        const data = await fetchJSONP(`${apiBase}?${params}`);
 
         if (data.error) {
             // 页面不存在，尝试搜索
@@ -1124,37 +1131,38 @@ async function fetchWikiPage(query, titleEl, linkEl, loading, contentEl, errorEl
         });
 
     } catch (err) {
-        loading.style.display = 'none';
-        errorEl.style.display = 'block';
-        errorEl.innerHTML = `
-            <div style="font-size:22px;margin-bottom:16px;opacity:0.5;">◈</div>
-            <div style="color:var(--primary-color);margin-bottom:8px;letter-spacing:2px;">检索失败</div>
-            <div style="opacity:0.6;font-size:11px;">${err.message}</div>
-            <div style="margin-top:20px;">
-                <a href="https://santi.huijiwiki.com/wiki/${encodeURIComponent(query)}" 
-                   target="_blank" rel="noopener"
-                   style="color:var(--secondary-color);font-size:11px;border:1px solid rgba(0,255,153,0.3);padding:6px 14px;border-radius:4px;text-decoration:none;">
-                    在浏览器中直接打开 ↗
-                </a>
-            </div>
-        `;
+        showWikiBlockedError(query, titleEl, loading, errorEl);
     }
 }
 
+function showWikiBlockedError(query, titleEl, loading, errorEl) {
+    const wikiUrl = `https://santi.huijiwiki.com/wiki/${encodeURIComponent(query)}`;
+    titleEl.textContent = `◈ ${query}`;
+    loading.style.display = 'none';
+    errorEl.style.display = 'block';
+    errorEl.innerHTML = `
+        <div style="font-size:22px;margin-bottom:16px;opacity:0.4;">◈</div>
+        <div style="color:var(--primary-color);margin-bottom:10px;letter-spacing:2px;">无法加载检索内容</div>
+        <div style="opacity:0.55;font-size:11px;line-height:1.8;margin-bottom:20px;">
+            受网络环境限制，当前无法通过代理获取 Wiki 数据。<br>
+            点击下方按钮可直接在浏览器中查看词条。
+        </div>
+        <a href="${wikiUrl}" target="_blank" rel="noopener"
+           style="display:inline-block;color:#0a0e17;background:var(--secondary-color);
+                  font-family:var(--font-display);font-size:11px;letter-spacing:2px;
+                  border-radius:4px;padding:10px 24px;text-decoration:none;
+                  box-shadow:0 0 16px rgba(0,255,153,0.4);">
+            在 Wiki 中查看 ↗
+        </a>
+    `;
+}
+
 async function searchWikiSuggestions(query, titleEl, loading, contentEl, errorEl) {
-    // 页面不存在时，尝试搜索相关词条
     const apiBase = 'https://santi.huijiwiki.com/api.php';
-    const params = new URLSearchParams({
-        action: 'query',
-        list: 'search',
-        srsearch: query,
-        format: 'json',
-        srlimit: '8',
-        origin: '*'
-    });
+    const params = `action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=8`;
 
     try {
-        const data = await fetchWithCORSFallback(`${apiBase}?${params}`);
+        const data = await fetchJSONP(`${apiBase}?${params}`);
         const results = data?.query?.search || [];
 
         titleEl.textContent = `搜索结果: "${query}"`;
@@ -1205,13 +1213,26 @@ function processWikiHtml(html) {
     const div = document.createElement('div');
     div.innerHTML = html;
 
-    // 直接隐藏所有图片（wiki图片因防盗链无法跨域加载）
+    // 修正图片路径并尝试加载；加载失败时隐藏，避免破损图标
     div.querySelectorAll('img').forEach(img => {
-        img.style.display = 'none';
-    });
-    // 同时隐藏只含图片的figure/图片容器，避免留下空白占位
-    div.querySelectorAll('figure, .thumb, .thumbinner, .floatright, .floatleft, .image').forEach(el => {
-        if (!el.textContent.trim()) el.style.display = 'none';
+        // 补全协议和域名
+        let src = img.getAttribute('src') || '';
+        if (src.startsWith('//'))  src = 'https:' + src;
+        else if (src.startsWith('/')) src = 'https://santi.huijiwiki.com' + src;
+        if (!src) { img.style.display = 'none'; return; }
+
+        img.src = src;
+        // no-referrer 可绕过部分防盗链检测（不发送 Referer 头）
+        img.referrerPolicy = 'no-referrer';
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '4px';
+        img.style.margin = '4px 0';
+        // 加载失败时静默隐藏，同时隐藏父级图片容器
+        img.onerror = function () {
+            this.style.display = 'none';
+            const container = this.closest('.thumb, .thumbinner, figure, .floatright, .floatleft');
+            if (container) container.style.display = 'none';
+        };
     });
 
     // 修正内部wiki链接为弹窗内跳转

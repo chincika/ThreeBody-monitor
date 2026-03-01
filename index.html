@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三体舰队运行监控</title>
+    <title>控件望远镜控制中心</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
@@ -169,7 +169,7 @@
                     </div>
                     <div class="data-item">
                         <span class="data-label">探测器形态</span>
-                        <span class="data-value" id="wdType">强互作用力探测器</span>
+                        <span class="data-value" id="wdType">强互作用力宇宙探测器</span>
                     </div>
                     <div class="data-item highlight" id="wdDetectItem">
                         <span class="data-label">探测器状态</span>
@@ -180,7 +180,7 @@
                         <span class="data-value large" id="wdCount">0</span>
                     </div>
                     <div class="data-item">
-                        <span class="data-label">距地球最近距离</span>
+                        <span class="data-label">距地球平均距离</span>
                         <span class="data-value" id="wdDist">数据未知</span>
                     </div>
                     <div class="divider"></div>
@@ -189,12 +189,12 @@
                         <span class="data-value success" id="wdDeterrent">◉ 黑暗森林威慑 · 有效</span>
                     </div>
                     <div class="data-item" id="wdHolderRow" style="border-bottom:none;">
-                        <span class="data-label">威慑执行人</span>
-                        <span class="data-value small" id="wdHolder">罗辑 · 面壁者</span>
+                        <span class="data-label">执剑人</span>
+                        <span class="data-value small" id="wdHolder">罗辑</span>
                     </div>
                     <div class="data-item" id="wdBreakRow" style="display:none;border-bottom:none;">
                         <span class="data-label">终结原因</span>
-                        <span class="data-value small" style="color:#ff6b35;">程心 · 放弃威慑</span>
+                        <span class="data-value small" style="color:#ff6b35;">执剑人程心 · 放弃威慑</span>
                     </div>
                 </div>
 
@@ -202,7 +202,7 @@
                 <div id="panel-darkforest" style="display:none;">
                     <div class="panel-header">
                         <span class="panel-icon">◬</span>
-                        <span class="panel-title">暗森预警 / DARK FOREST ALERT</span>
+                        <span class="panel-title">黑暗森林打击预警 / DARK FOREST ALERT</span>
                     </div>
                     <div class="alert-badge" id="dfAlertBadge">
                         <span class="alert-badge-dot"></span>
@@ -350,7 +350,7 @@
                     <div class="wiki-loading-dots">
                         <span></span><span></span><span></span>
                     </div>
-                    <span>正在检索数据库...</span>
+                    <span>正在检索系统数据库...</span>
                 </div>
                 <div class="wiki-content" id="wikiContent" style="display:none;"></div>
                 <div class="wiki-error" id="wikiError" style="display:none;"></div>
